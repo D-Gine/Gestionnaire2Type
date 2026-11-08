@@ -28,7 +28,8 @@ func VerifyType(db *sql.DB, componentList *gdt.ComponentMap, valueJson json.RawM
 	}
 	return nil
 }
-func ValidateRowTypes(db *sql.DB, toVerify *gdt.TypeValueMap, components *gdt.ComponentMap, rows *sql.Rows) (errorsMap map[string]string, count int, err error) {
+
+func ValidateRowTypes(db *sql.DB, toVerify *map[string]json.RawMessage, components *gdt.ComponentMap, rows *sql.Rows) (errorsMap map[string]string, count int, err error) {
 	errorsMap = make(map[string]string)
 	for count = 0; rows.Next(); count++ {
 		var result TypeVerifications
@@ -41,9 +42,11 @@ func ValidateRowTypes(db *sql.DB, toVerify *gdt.TypeValueMap, components *gdt.Co
 	}
 	return errorsMap, count, gdt.DatabaseError(rows.Err())
 }
+
 func ValidateRowComponents(db *sql.DB, components *gdt.ComponentMap, rows *sql.Rows) (map[string]string, int, error) {
 	return ValidateRowComponentsWithValues(db, components, components, rows)
 }
+
 func ValidateRowComponentsWithValues(db *sql.DB, toVerify *gdt.ComponentMap, components *gdt.ComponentMap, rows *sql.Rows) (errorsMap map[string]string, count int, err error) {
 	errorsMap = make(map[string]string)
 	for count = 0; rows.Next(); count++ {

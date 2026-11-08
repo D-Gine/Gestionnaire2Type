@@ -27,6 +27,7 @@ func GetEntityComponents(db *sql.DB, entityId string) (gdt.ComponentMap, error) 
 	}
 	return componentList, nil
 }
+
 func ValidateEntity(db *sql.DB, entityId string) (map[string]string, error) {
 	componentList, err := GetEntityComponents(db, entityId)
 	if err != nil {

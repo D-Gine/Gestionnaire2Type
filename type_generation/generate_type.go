@@ -19,6 +19,7 @@ func GenerateKnownedType(db *sql.DB, staticValues gdt.ComponentMap, infos Genera
 	}
 	return BaseTypeGeneration(db, staticValues, infos)
 }
+
 func GenerateRowTypes(db *sql.DB, components gdt.ComponentMap, rows *sql.Rows) (map[string]json.RawMessage, error) {
 	generated := make(map[string]json.RawMessage)
 	for rows.Next() {

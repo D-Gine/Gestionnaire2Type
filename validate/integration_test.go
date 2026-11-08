@@ -169,6 +169,7 @@ func TestIntegrationValidateEntity(t *testing.T) {
 		t.Errorf("Freebird should be valid, got %v", errs)
 	}
 }
+
 func TestIntegrationValidateEntityOnlyChecksItsComponents(t *testing.T) {
 	db := testDB(t)
 	errs, err := ValidateEntity(db, entityTest)
