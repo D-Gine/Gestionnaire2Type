@@ -30,7 +30,7 @@ func generateString(restriction gdt.StringRestrictions) (json.RawMessage, error)
 
 	maxLen := minLen + (rand.Int() % 254) + 1
 	if restriction.MaxLength != nil {
-		maxLen = *restriction.MaxLength
+		maxLen = max(*restriction.MaxLength, 0)
 	}
 	if minLen > maxLen {
 		minLen, maxLen = maxLen, minLen

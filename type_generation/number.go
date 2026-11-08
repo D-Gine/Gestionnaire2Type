@@ -9,26 +9,27 @@ import (
 )
 
 func generateNumber(restriction gdt.NumberRestrictions) (json.RawMessage, error) {
-	min := int64(math.MinInt32)
+	lo := int64(math.MinInt32)
 	if restriction.Min != nil {
-		min = int64(*restriction.Min)
+		lo = int64(*restriction.Min)
 	}
 
-	max := int64(math.MaxInt32)
+	hi := int64(math.MaxInt32)
 	if restriction.Max != nil {
-		max = int64(*restriction.Max)
+		hi = int64(*restriction.Max)
 	}
 
-	if min > max {
-		min, max = max, min
+	if lo > hi {
+		lo, hi = hi, lo
 	}
-	valueRange := (max - min) + 1
-	value := int32(min + rand.Int64N(valueRange))
-
-	jsonValue, err := json.Marshal(value)
-	if err != nil {
-		return jsonValue, err
+	span := uint64(hi) - uint64(lo)
+	var offset uint64
+	if span == math.MaxUint64 {
+		offset = rand.Uint64()
 	} else {
-		return jsonValue, err
+		offset = rand.Uint64N(span + 1)
 	}
+	value := int64(uint64(lo) + offset)
+
+	return json.Marshal(value)
 }

@@ -20,7 +20,7 @@ type BaseVerifications struct {
 }
 
 type ComponentVerification struct {
-	ComponentId string `json:"node_id"`
+	ComponentId string `json:"component_id"`
 	BaseVerifications
 }
 

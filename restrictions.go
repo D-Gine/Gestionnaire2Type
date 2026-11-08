@@ -2,6 +2,8 @@ package gdt
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 )
 
 type ComponentMap = map[string]json.RawMessage
@@ -42,4 +44,13 @@ type ListRestrictions struct {
 type DictionaryRestrictions struct {
 	BaseRestrictions
 	Interface *map[string]string `json:"interface,omitempty"`
+}
+
+var ErrDatabase = errors.New("database error")
+
+func DatabaseError(err error) error {
+	if err == nil {
+		return nil
+	}
+	return fmt.Errorf("%w: %w", ErrDatabase, err)
 }

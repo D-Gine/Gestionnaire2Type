@@ -1,7 +1,6 @@
 package validate
 
 import (
-	"api/src/controllers"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -30,19 +29,34 @@ func VerifyType(db *sql.DB, componentList *gdt.ComponentMap, valueJson json.RawM
 	return nil
 }
 
-func ValidateRowTypes(db *sql.DB, componentList *controllers.ComponentMap, rows *sql.Rows) (err error, errors_map map[string]string, count int) {
-	errors_map = make(map[string]string)
-	var result ComponentVerification
+func ValidateRowTypes(db *sql.DB, toVerify *map[string]json.RawMessage, components *gdt.ComponentMap, rows *sql.Rows) (errorsMap map[string]string, count int, err error) {
+	errorsMap = make(map[string]string)
 	for count = 0; rows.Next(); count++ {
+		var result TypeVerifications
+		if err = rows.Scan(&result.TypeId, &result.BaseName, pq.Array(&result.Scripts), &result.Restrictions); err != nil {
+			return errorsMap, count, gdt.DatabaseError(err)
+		}
+		if typeErr := VerifyType(db, components, (*toVerify)[result.TypeId], result); typeErr != nil {
+			errorsMap[result.TypeId] = typeErr.Error()
+		}
+	}
+	return errorsMap, count, gdt.DatabaseError(rows.Err())
+}
+
+func ValidateRowComponents(db *sql.DB, components *gdt.ComponentMap, rows *sql.Rows) (map[string]string, int, error) {
+	return ValidateRowComponentsWithValues(db, components, components, rows)
+}
+
+func ValidateRowComponentsWithValues(db *sql.DB, toVerify *gdt.ComponentMap, components *gdt.ComponentMap, rows *sql.Rows) (errorsMap map[string]string, count int, err error) {
+	errorsMap = make(map[string]string)
+	for count = 0; rows.Next(); count++ {
+		var result ComponentVerification
 		if err = rows.Scan(&result.ComponentId, &result.BaseName, pq.Array(&result.Scripts), &result.Restrictions); err != nil {
-			return
+			return errorsMap, count, gdt.DatabaseError(err)
 		}
-		if type_err := VerifyType(db, componentList, (*componentList)[result.ComponentId], result); type_err != nil {
-			errors_map[result.ComponentId] = type_err.Error()
+		if typeErr := VerifyType(db, components, (*toVerify)[result.ComponentId], result); typeErr != nil {
+			errorsMap[result.ComponentId] = typeErr.Error()
 		}
 	}
-	if err = rows.Err(); err != nil {
-		return
-	}
-	return
+	return errorsMap, count, gdt.DatabaseError(rows.Err())
 }

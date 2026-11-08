@@ -23,12 +23,10 @@ func BaseTypeGeneration(db *sql.DB, staticValues gdt.ComponentMap, infos Generat
 		}
 		return generateString(r)
 	case "enum":
-		fmt.Println(infos.Restrictions.String())
 		r, err := gdt.ParseRestriction[gdt.EnumRestrictions](infos.TypeName, infos.Restrictions)
 		if err != nil {
 			return nil, err
 		}
-		fmt.Println(r.Tags)
 		return generateEnum(db, r)
 	case "list":
 		r, err := gdt.ParseRestriction[gdt.ListRestrictions](infos.TypeName, infos.Restrictions)
@@ -36,12 +34,12 @@ func BaseTypeGeneration(db *sql.DB, staticValues gdt.ComponentMap, infos Generat
 			return nil, err
 		}
 		return generateList(r, staticValues)
-	case "dict":
+	case "dictionary":
 		r, err := gdt.ParseRestriction[gdt.DictionaryRestrictions](infos.TypeName, infos.Restrictions)
 		if err != nil {
 			return nil, err
 		}
 		return generateDictionary(r, staticValues)
 	}
-	return nil, fmt.Errorf("Unknow type %s", infos.TypeName)
+	return nil, fmt.Errorf("unknown type %q", infos.TypeName)
 }

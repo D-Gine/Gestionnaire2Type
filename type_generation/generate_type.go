@@ -19,3 +19,28 @@ func GenerateKnownedType(db *sql.DB, staticValues gdt.ComponentMap, infos Genera
 	}
 	return BaseTypeGeneration(db, staticValues, infos)
 }
+
+// GenerateRowTypes consumes rows shaped like (id, script, type_name,
+// restrictions) — e.g. joined with the type_generation() SQL function — and
+// generates a value for each one, keyed by id.
+//
+// Database errors wrap gdt.ErrDatabase.
+func GenerateRowTypes(db *sql.DB, components gdt.ComponentMap, rows *sql.Rows) (map[string]json.RawMessage, error) {
+	generated := make(map[string]json.RawMessage)
+	for rows.Next() {
+		var infos GenerationInfos
+		var id string
+		if err := rows.Scan(&id, &infos.Script, &infos.TypeName, &infos.Restrictions); err != nil {
+			return nil, gdt.DatabaseError(err)
+		}
+		value, err := GenerateKnownedType(db, components, infos)
+		if err != nil {
+			return nil, err
+		}
+		generated[id] = value
+	}
+	if err := rows.Err(); err != nil {
+		return nil, gdt.DatabaseError(err)
+	}
+	return generated, nil
+}

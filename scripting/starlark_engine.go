@@ -11,64 +11,26 @@ import (
 	"go.starlark.net/syntax"
 )
 
-// StarlarkEngine runs user-provided Starlark scripts (a small, safe, Python-like
-// language) from Go code. It holds no state, so a single instance can be shared
-// and used concurrently.
-//
-// Basic usage:
-//
-//	engine := scripting.NewStarlarkEngine()
-//	result, err := engine.Eval(ctx, script, "main", []any{1, 2}, nil)
-type StarlarkEngine struct{}
-
-// NewStarlarkEngine creates a ready-to-use StarlarkEngine.
-func NewStarlarkEngine() *StarlarkEngine {
-	return &StarlarkEngine{}
+type StarlarkEngine struct {
+	MaxSteps uint64
 }
 
-// Eval loads a Starlark script, calls one of its functions and returns the
-// result converted to plain Go values.
-//
-// Parameters:
-//   - ctx:      context checked before and after the call; if it is cancelled,
-//     Eval returns ctx.Err(). Note it does not interrupt a script that is
-//     already running.
-//   - script:   the full Starlark source code.
-//   - function: name of the top-level function in the script to call.
-//   - args:     positional arguments, passed in order (may be nil).
-//   - kwargs:   named arguments, passed by name (may be nil).
-//
-// Argument values are converted with goToStarlark, and the returned value with
-// starlarkToGo (see those functions for the supported types).
-//
-// Steps performed:
-//  1. Execute the script once to define its functions.
-//  2. Look up `function` among the globals and check that it is callable.
-//  3. Convert args/kwargs from Go to Starlark.
-//  4. Call the function.
-//  5. Convert the result back to Go.
-//
-// Errors are returned (wrapped) when the script has a syntax/runtime error, the
-// function does not exist or is not callable, a value cannot be converted, or
-// the context is cancelled.
-//
-// Example:
-//
-//	script := `
-//	def greet(name, punctuation="!"):
-//	    return {"message": "Hello " + name + punctuation}
-//	`
-//	res, err := engine.Eval(ctx, script, "greet",
-//		[]any{"Bob"},
-//		map[string]any{"punctuation": "?"},
-//	)
-//	if err != nil {
-//		return err
-//	}
-//	// res == map[string]any{"message": "Hello Bob?"}
-//	msg := res.(map[string]any)["message"].(string)
+const DefaultMaxSteps uint64 = 10_000_000
+
+func NewStarlarkEngine() *StarlarkEngine {
+	return &StarlarkEngine{MaxSteps: DefaultMaxSteps}
+}
+
+func (e *StarlarkEngine) newThread(name string) *starlark.Thread {
+	thread := &starlark.Thread{Name: name}
+	if e.MaxSteps > 0 {
+		thread.SetMaxExecutionSteps(e.MaxSteps)
+	}
+	return thread
+}
+
 func (e *StarlarkEngine) Eval(script string, function string, args []any, kwargs map[string]any) (any, error) {
-	globals, err := starlark.ExecFileOptions(&syntax.FileOptions{While: true}, &starlark.Thread{Name: function}, "script.star", script, nil)
+	globals, err := starlark.ExecFileOptions(&syntax.FileOptions{While: true}, e.newThread(function), "script.star", script, nil)
 	if err != nil {
 		return nil, fmt.Errorf("starlark exec error: %w", err)
 	}
@@ -103,7 +65,7 @@ func (e *StarlarkEngine) Eval(script string, function string, args []any, kwargs
 		}
 	}
 
-	thread := &starlark.Thread{Name: function + ".call"}
+	thread := e.newThread(function + ".call")
 	result, err := starlark.Call(thread, fn, positionals, named)
 	if err != nil {
 		return nil, fmt.Errorf("starlark call error: %w", err)
@@ -112,20 +74,6 @@ func (e *StarlarkEngine) Eval(script string, function string, args []any, kwargs
 	return starlarkToGo(result)
 }
 
-// starlarkToGo converts a Starlark value into a plain Go value.
-//
-// Mapping:
-//
-//	None              -> nil
-//	string            -> string
-//	bool              -> bool
-//	int               -> int64 (error if it does not fit in int64)
-//	float             -> float64
-//	list, tuple       -> []any (elements converted recursively)
-//	dict              -> map[string]any (keys MUST be strings)
-//
-// Any other type (set, function, ...) returns an error. When reading a result
-// in Go, use type assertions, e.g. `n := res.(int64)`.
 func starlarkToGo(v starlark.Value) (any, error) {
 	if v == starlark.None {
 		return nil, nil
@@ -183,22 +131,6 @@ func starlarkToGo(v starlark.Value) (any, error) {
 	}
 }
 
-// goToStarlark converts a Go value into a Starlark value so it can be passed
-// to a script.
-//
-// Mapping:
-//
-//		nil                          -> None
-//		string, bool                 -> string, bool
-//		int*, uint*                  -> int
-//		float32, float64             -> float
-//		map[string]any, []any        -> dict, list (converted recursively)
-//	 map[string]json.RawMessage   -> dict raw json
-//		any map with string keys     -> dict   (via reflection)
-//		any slice or array           -> list   (via reflection)
-//
-// Structs, pointers and maps with non-string keys are NOT supported and return
-// an error; convert them to a map[string]any first.
 func goToStarlark(v any) (starlark.Value, error) {
 	if v == nil {
 		return starlark.None, nil
@@ -270,7 +202,10 @@ func goToStarlark(v any) (starlark.Value, error) {
 		starlarkVal, err := starlark.Call(thread, decodeFn, starlark.Tuple{starlark.String(jsonString)}, nil)
 		return starlarkVal, err
 	case json.RawMessage:
-		jsonString := x.String()
+		if len(x) == 0 {
+			return starlark.None, nil
+		}
+		jsonString := string(x)
 		thread := &starlark.Thread{Name: "main"}
 		decodeFn, ok := starlarkjson.Module.Members["decode"].(starlark.Callable)
 		if !ok {

@@ -56,5 +56,5 @@ func ValidateBaseType(db *sql.DB, nodeList *gdt.ComponentMap, valueJson json.Raw
 		return InitBaseTypeVerification(db, nodeList, name, valueJson, restrictionsJson, VerifyDictionary)
 	}
 
-	return nil
+	return fmt.Errorf("unknown base type %q", name)
 }
