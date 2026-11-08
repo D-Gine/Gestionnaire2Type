@@ -18,21 +18,30 @@ import (
 // Basic usage:
 //
 //	engine := scripting.NewStarlarkEngine()
-//	result, err := engine.Eval(ctx, script, "main", []any{1, 2}, nil)
-type StarlarkEngine struct{}
+//	result, err := engine.Eval(script, "main", []any{1, 2}, nil)
+type StarlarkEngine struct {
+	MaxSteps uint64
+}
+
+const DefaultMaxSteps uint64 = 10_000_000
 
 // NewStarlarkEngine creates a ready-to-use StarlarkEngine.
 func NewStarlarkEngine() *StarlarkEngine {
-	return &StarlarkEngine{}
+	return &StarlarkEngine{MaxSteps: DefaultMaxSteps}
+}
+
+func (e *StarlarkEngine) newThread(name string) *starlark.Thread {
+	thread := &starlark.Thread{Name: name}
+	if e.MaxSteps > 0 {
+		thread.SetMaxExecutionSteps(e.MaxSteps)
+	}
+	return thread
 }
 
 // Eval loads a Starlark script, calls one of its functions and returns the
 // result converted to plain Go values.
 //
 // Parameters:
-//   - ctx:      context checked before and after the call; if it is cancelled,
-//     Eval returns ctx.Err(). Note it does not interrupt a script that is
-//     already running.
 //   - script:   the full Starlark source code.
 //   - function: name of the top-level function in the script to call.
 //   - args:     positional arguments, passed in order (may be nil).
@@ -50,7 +59,7 @@ func NewStarlarkEngine() *StarlarkEngine {
 //
 // Errors are returned (wrapped) when the script has a syntax/runtime error, the
 // function does not exist or is not callable, a value cannot be converted, or
-// the context is cancelled.
+// the script exceeds MaxSteps.
 //
 // Example:
 //
@@ -58,7 +67,7 @@ func NewStarlarkEngine() *StarlarkEngine {
 //	def greet(name, punctuation="!"):
 //	    return {"message": "Hello " + name + punctuation}
 //	`
-//	res, err := engine.Eval(ctx, script, "greet",
+//	res, err := engine.Eval(script, "greet",
 //		[]any{"Bob"},
 //		map[string]any{"punctuation": "?"},
 //	)
@@ -68,7 +77,7 @@ func NewStarlarkEngine() *StarlarkEngine {
 //	// res == map[string]any{"message": "Hello Bob?"}
 //	msg := res.(map[string]any)["message"].(string)
 func (e *StarlarkEngine) Eval(script string, function string, args []any, kwargs map[string]any) (any, error) {
-	globals, err := starlark.ExecFileOptions(&syntax.FileOptions{While: true}, &starlark.Thread{Name: function}, "script.star", script, nil)
+	globals, err := starlark.ExecFileOptions(&syntax.FileOptions{While: true}, e.newThread(function), "script.star", script, nil)
 	if err != nil {
 		return nil, fmt.Errorf("starlark exec error: %w", err)
 	}
@@ -103,7 +112,7 @@ func (e *StarlarkEngine) Eval(script string, function string, args []any, kwargs
 		}
 	}
 
-	thread := &starlark.Thread{Name: function + ".call"}
+	thread := e.newThread(function + ".call")
 	result, err := starlark.Call(thread, fn, positionals, named)
 	if err != nil {
 		return nil, fmt.Errorf("starlark call error: %w", err)
@@ -270,7 +279,10 @@ func goToStarlark(v any) (starlark.Value, error) {
 		starlarkVal, err := starlark.Call(thread, decodeFn, starlark.Tuple{starlark.String(jsonString)}, nil)
 		return starlarkVal, err
 	case json.RawMessage:
-		jsonString := x.String()
+		if len(x) == 0 {
+			return starlark.None, nil
+		}
+		jsonString := string(x)
 		thread := &starlark.Thread{Name: "main"}
 		decodeFn, ok := starlarkjson.Module.Members["decode"].(starlark.Callable)
 		if !ok {

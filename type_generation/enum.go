@@ -13,8 +13,7 @@ import (
 func generateEnum(db *sql.DB, restriction gdt.EnumRestrictions) (json.RawMessage, error) {
 	var enum string
 
-	fmt.Println(restriction)
-	if restriction.Tags == nil {
+	if len(restriction.Tags) == 0 {
 		//TODO
 		return nil, errors.New("cannot generate enum with no tag")
 	}
@@ -27,15 +26,11 @@ func generateEnum(db *sql.DB, restriction gdt.EnumRestrictions) (json.RawMessage
 			ORDER BY RANDOM()
 			LIMIT 1
 		`, pq.Array(restriction.Tags)).Scan(&enum)
-	fmt.Println("enum: ", enum)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, fmt.Errorf("No enum found for tag requirement %q", restriction.Tags)
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("no enum found for tag requirement %q", restriction.Tags)
 		}
+		return nil, gdt.DatabaseError(fmt.Errorf("error fetching enum: %w", err))
 	}
-	res, err := json.Marshal(enum)
-	if err != nil {
-		return nil, err
-	}
-	return res, nil
+	return json.Marshal(enum)
 }

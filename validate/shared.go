@@ -2,10 +2,12 @@ package validate
 
 import (
 	"encoding/json"
+
+	gdt "github.com/D-Gine/Gestionnaire2Type"
 )
 
 type NodeList struct {
-	NodeValues map[string]json.RawMessage `json:"node_values" swaggertype:"object"`
+	NodeValues gdt.NodeMap `json:"node_values" swaggertype:"object"`
 }
 
 type MultipleNodeValidation struct {
@@ -20,7 +22,7 @@ type BaseVerifications struct {
 }
 
 type ComponentVerification struct {
-	ComponentId string `json:"node_id"`
+	ComponentId string `json:"component_id"`
 	BaseVerifications
 }
 
