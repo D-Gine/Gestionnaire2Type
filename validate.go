@@ -1,13 +1,11 @@
-package validate
+package gdt
 
 import (
 	"encoding/json"
-
-	gdt "github.com/D-Gine/Gestionnaire2Type"
 )
 
 type NodeList struct {
-	NodeValues gdt.NodeMap `json:"node_values" swaggertype:"object"`
+	NodeValues NodeMap `json:"node_values" swaggertype:"object"`
 }
 
 type MultipleNodeValidation struct {

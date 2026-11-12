@@ -29,9 +29,9 @@ func VerifyDictionary(db *sql.DB, componentList *gdt.ComponentMap, value map[str
 		return fmt.Errorf("error fetching interfaces types, please recheck validity of you interface, %w", err)
 	}
 	defer func() { _ = rows.Close() }()
-	verificationMap := make(map[string]TypeVerifications)
+	verificationMap := make(map[string]gdt.TypeVerifications)
 	for rows.Next() {
-		var verification TypeVerifications
+		var verification gdt.TypeVerifications
 		var baseName sql.NullString
 		if err := rows.Scan(
 			&verification.TypeId,
