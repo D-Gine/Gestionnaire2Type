@@ -6,12 +6,8 @@ import (
 	gdt "github.com/D-Gine/Gestionnaire2Type"
 )
 
-type NodeList struct {
-	NodeValues gdt.NodeMap `json:"node_values" swaggertype:"object"`
-}
-
 type MultipleNodeValidation struct {
-	NodeList
+	gdt.NodeList
 	NodeIds []string `json:"node_ids"`
 }
 
