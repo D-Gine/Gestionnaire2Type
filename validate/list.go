@@ -10,7 +10,7 @@ import (
 )
 
 func VerifyList(db *sql.DB, componentList *gdt.ComponentMap, value []json.RawMessage, restrictions gdt.ListRestrictions) error {
-	var verification gdt.TypeVerifications
+	var verification TypeVerifications
 	err := db.QueryRow(`
 		SELECT * FROM get_verifications($1)`, pq.Array([]string{restrictions.Type})).Scan(
 		&verification.TypeId,

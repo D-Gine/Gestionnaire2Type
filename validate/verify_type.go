@@ -9,7 +9,7 @@ import (
 	"github.com/lib/pq"
 )
 
-func VerifyType(db *sql.DB, componentList *gdt.ComponentMap, valueJson json.RawMessage, baseVerification gdt.Verification) error {
+func VerifyType(db *sql.DB, componentList *gdt.ComponentMap, valueJson json.RawMessage, baseVerification Verification) error {
 	verification := baseVerification.GetBase()
 	if err := ValidateBaseType(db, componentList, valueJson, verification.BaseName, verification.Restrictions); err != nil {
 		return fmt.Errorf("error validation base type: %w", err)
@@ -32,7 +32,7 @@ func VerifyType(db *sql.DB, componentList *gdt.ComponentMap, valueJson json.RawM
 func ValidateRowTypes(db *sql.DB, toVerify *map[string]json.RawMessage, components *gdt.ComponentMap, rows *sql.Rows) (errorsMap map[string]string, count int, err error) {
 	errorsMap = make(map[string]string)
 	for count = 0; rows.Next(); count++ {
-		var result gdt.TypeVerifications
+		var result TypeVerifications
 		if err = rows.Scan(&result.TypeId, &result.BaseName, pq.Array(&result.Scripts), &result.Restrictions); err != nil {
 			return errorsMap, count, gdt.DatabaseError(err)
 		}
@@ -50,7 +50,7 @@ func ValidateRowComponents(db *sql.DB, components *gdt.ComponentMap, rows *sql.R
 func ValidateRowComponentsWithValues(db *sql.DB, toVerify *gdt.ComponentMap, components *gdt.ComponentMap, rows *sql.Rows) (errorsMap map[string]string, count int, err error) {
 	errorsMap = make(map[string]string)
 	for count = 0; rows.Next(); count++ {
-		var result gdt.ComponentVerification
+		var result ComponentVerification
 		if err = rows.Scan(&result.ComponentId, &result.BaseName, pq.Array(&result.Scripts), &result.Restrictions); err != nil {
 			return errorsMap, count, gdt.DatabaseError(err)
 		}

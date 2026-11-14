@@ -87,9 +87,9 @@ def validate_type(value, restrictions, components):
 `
 
 func TestVerifyTypeWithScript(t *testing.T) {
-	verif := gdt.TypeVerifications{
+	verif := TypeVerifications{
 		TypeId: "t",
-		BaseVerifications: gdt.BaseVerifications{
+		BaseVerifications: BaseVerifications{
 			BaseName:     "number",
 			Restrictions: json.RawMessage(`{"max":100}`),
 			Scripts:      []string{validateScript},
@@ -116,9 +116,9 @@ func TestVerifyTypeWithScript(t *testing.T) {
 }
 
 func TestVerifyTypeBrokenScript(t *testing.T) {
-	verif := gdt.ComponentVerification{
+	verif := ComponentVerification{
 		ComponentId: "c",
-		BaseVerifications: gdt.BaseVerifications{
+		BaseVerifications: BaseVerifications{
 			BaseName:     "string",
 			Restrictions: json.RawMessage(`{}`),
 			Scripts:      []string{"def nope(:\n"},
